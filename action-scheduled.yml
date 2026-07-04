@@ -1,0 +1,105 @@
+name: "CodeGuardian Scheduled Scan"
+description: "Daily/weekly security scan with reporting"
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Every Monday at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      scanners:
+        description: "Scanners to run"
+        required: false
+        default: "secrets,dependencies,pii"
+      fail_on:
+        description: "Fail threshold"
+        required: false
+        default: "critical"
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install CodeGuardian
+        run: npm install -g https://github.com/djimit/codeguardian/archive/refs/heads/main.tar.gz
+
+      - name: Run Scan
+        id: scan
+        run: |
+          codeguardian scan \
+            --path . \
+            --scanners ${{ github.event.inputs.scanners || 'secrets,dependencies,pii' }} \
+            --format json \
+            --output codeguardian-report.json \
+            --fail-on ${{ github.event.inputs.fail_on || 'critical' }} || true
+
+      - name: Generate SARIF
+        run: |
+          codeguardian scan \
+            --path . \
+            --format sarif \
+            --output codeguardian-results.sarif || true
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: codeguardian-results.sarif
+
+      - name: Upload Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeguardian-report
+          path: codeguardian-report.json
+          retention-days: 90
+
+      - name: Create Issue for Critical Findings
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const report = JSON.parse(fs.readFileSync('codeguardian-report.json', 'utf8'));
+              const critical = report.summary.bySeverity?.critical || 0;
+              const high = report.summary.bySeverity?.high || 0;
+
+              if (critical > 0 || high > 0) {
+                const body = `## 🛡️ CodeGuardian Scheduled Scan Results\n\n` +
+                  `**Date:** ${new Date().toISOString().slice(0, 10)}\n` +
+                  `**Critical:** ${critical}\n` +
+                  `**High:** ${high}\n` +
+                  `**Total:** ${report.summary.totalFindings}\n` +
+                  `**Maturity:** ${report.summary.maturity?.overall ?? '-'}/5\n\n` +
+                  `[View full report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+                github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `🚨 CodeGuardian: ${critical} critical, ${high} high findings`,
+                  body: body,
+                  labels: ['security', 'codeguardian']
+                });
+              }
+            } catch (e) {
+              console.log('Could not create issue:', e.message);
+            }
+
+      - name: Auto-fix safe dependency issues
+        if: github.event_name == 'schedule'
+        run: |
+          codeguardian fix --output codeguardian-report.json --apply || true

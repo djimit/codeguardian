@@ -1,0 +1,35 @@
+# CodeGuardian Configuratie
+# Documentatie: https://github.com/djimit/codeguardian
+
+# Fail threshold voor pre-commit en CI
+fail_on: high
+
+# Automatische scans
+scanners:
+  secrets: true
+  dependencies: true
+  pii: true
+
+# Suppressions — onderdruk bekende false positives
+suppressions:
+  # Voorbeeld: test data onderdrukken
+  # - rule_id: pii-bsn
+  #   path: "**/tests/fixtures/**"
+  #   reason: Geanonimiseerde testdata
+  #   expires: 2026-12-31
+
+  # Voorbeeld: legacy package tijdelijk toestaan
+  # - rule_id: dependency-cve
+  #   path: "packages/legacy/**"
+  #   reason: Legacy package, geplande migratie Q2
+  #   expires: 2026-06-30
+
+  # Voorbeeld: alle regels op een path onderdrukken
+  # - rule_id: "*"
+  #   path: "docs/examples/**"
+  #   reason: Intentionele voorbeelden
+
+# History tracking (voor dashboard trends)
+history:
+  enabled: true
+  retention_days: 90

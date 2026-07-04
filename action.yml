@@ -1,0 +1,91 @@
+name: "CodeGuardian Security Scan"
+description: "Scan repository for secrets, CVEs, and PII using CodeGuardian"
+author: "djimit"
+
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  scanners:
+    description: "Comma-separated scanners to run (secrets,dependencies,pii)"
+    required: false
+    default: "dependencies,pii"
+  fail-on:
+    description: "Fail on severity threshold (critical, high, medium, low)"
+    required: false
+    default: "critical"
+  format:
+    description: "Output format (markdown, json, sarif)"
+    required: false
+    default: "markdown"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install CodeGuardian dependencies
+      shell: bash
+      run: npm ci --omit=dev --prefix "$GITHUB_ACTION_PATH"
+
+    - name: Run CodeGuardian Scan
+      shell: bash
+      run: |
+        node "$GITHUB_ACTION_PATH/bin/codeguardian.js" scan \
+          --path . \
+          --scanners ${{ inputs.scanners }} \
+          --format ${{ inputs.format }} \
+          --fail-on ${{ inputs.fail-on }} \
+          --output codeguardian-report.json
+
+    - name: Upload Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeguardian-report
+        path: codeguardian-report.json
+        retention-days: 30
+
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request' && inputs.format == 'markdown'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = fs.readFileSync('codeguardian-report.json', 'utf8');
+            const data = JSON.parse(report);
+            const summary = data.summary;
+            const body = `## CodeGuardian Scan Results\n\n` +
+              `**Repositories:** ${summary.totalRepositories}\n` +
+              `**Total Findings:** ${summary.totalFindings}\n` +
+              `**Maturity:** ${summary.maturity?.overall ?? '-'}/5 (${summary.maturity?.label ?? '-'})\n\n` +
+              `| Severity | Count |\n|----------|-------|\n` +
+              `| Critical | ${summary.bySeverity?.critical ?? 0} |\n` +
+              `| High | ${summary.bySeverity?.high ?? 0} |\n` +
+              `| Medium | ${summary.bySeverity?.medium ?? 0} |\n` +
+              `| Low | ${summary.bySeverity?.low ?? 0} |\n\n` +
+              `[View full report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          } catch (e) {
+            console.log('Could not post PR comment:', e.message);
+          }
+
+    - name: PR Review Line Comments
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        node "$GITHUB_ACTION_PATH/bin/codeguardian.js" pr-review \
+          --output codeguardian-report.json \
+          --pr ${{ github.event.number }} \
+          --post

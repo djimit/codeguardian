@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeGuardian Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid #1e293b; padding-bottom: 1rem; }
+    h1 { font-size: 1.5rem; color: #f8fafc; }
+    h2 { font-size: 1.1rem; color: #94a3b8; margin-bottom: 1rem; }
+    .meta { color: #64748b; font-size: 0.85rem; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: #1e293b; border-radius: 8px; padding: 1.25rem; border: 1px solid #334155; }
+    .card-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .card-value { font-size: 2rem; font-weight: 700; color: #f8fafc; }
+    .card-sub { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+
+    .severity-bar { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+    .severity-item { flex: 1; text-align: center; padding: 0.75rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .severity-item:hover { opacity: 0.8; }
+    .sev-critical { background: #7f1d1d; color: #fca5a5; }
+    .sev-high { background: #7c2d12; color: #fdba74; }
+    .sev-medium { background: #713f12; color: #fde047; }
+    .sev-low { background: #14532d; color: #86efac; }
+    .sev-info { background: #1e3a5f; color: #93c5fd; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+    @media (max-width: 800px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .repos-table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+    .repos-table th { text-align: left; padding: 0.75rem; background: #1e293b; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155; cursor: pointer; }
+    .repos-table th:hover { color: #f8fafc; }
+    .repos-table td { padding: 0.75rem; border-bottom: 1px solid #1e293b; font-size: 0.9rem; }
+    .repos-table tr:hover td { background: #1e293b; }
+    .repos-table tr.clickable { cursor: pointer; }
+
+    .maturity-cell { display: flex; gap: 0.25rem; align-items: center; }
+    .maturity-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .mat-1 { background: #dc2626; }
+    .mat-2 { background: #f97316; }
+    .mat-3 { background: #eab308; }
+    .mat-4 { background: #22c55e; }
+    .mat-5 { background: #10b981; }
+
+    .findings-detail { margin-top: 2rem; }
+    .finding-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: #1e293b; border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid; transition: transform 0.1s; }
+    .finding-item:hover { transform: translateX(2px); }
+    .finding-critical { border-left-color: #dc2626; }
+    .finding-high { border-left-color: #f97316; }
+    .finding-medium { border-left-color: #eab308; }
+    .finding-low { border-left-color: #22c55e; }
+    .finding-info { border-left-color: #3b82f6; }
+    .finding-title { font-weight: 600; font-size: 0.9rem; }
+    .finding-meta { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+    .finding-fix { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+
+    .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+    .filter-btn { padding: 0.4rem 0.8rem; border-radius: 4px; border: 1px solid #334155; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+    .filter-btn.active { background: #334155; color: #f8fafc; }
+    .filter-btn:hover { border-color: #475569; }
+    .search-input { padding: 0.4rem 0.8rem; border-radius: 4px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 0.8rem; width: 200px; }
+    .search-input:focus { outline: none; border-color: #3b82f6; }
+
+    .upload-area { border: 2px dashed #334155; border-radius: 8px; padding: 3rem; text-align: center; margin-bottom: 2rem; cursor: pointer; transition: border-color 0.2s; }
+    .upload-area:hover { border-color: #475569; }
+    .upload-area p { color: #64748b; margin-top: 0.5rem; }
+
+    .hidden { display: none; }
+
+    .repo-detail { background: #1e293b; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid #334155; }
+    .repo-detail h3 { margin-bottom: 1rem; }
+    .repo-detail .close-btn { float: right; cursor: pointer; color: #64748b; }
+    .repo-detail .close-btn:hover { color: #f8fafc; }
+
+    .compliance-badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.7rem; margin: 0.1rem; }
+    .badge-bio2 { background: #1e3a5f; color: #93c5fd; }
+    .badge-nora { background: #14532d; color: #86efac; }
+    .badge-avg { background: #7c2d12; color: #fdba74; }
+    .badge-nis2 { background: #713f12; color: #fde047; }
+
+    .tab-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid #1e293b; }
+    .tab-btn { padding: 0.5rem 1rem; background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: #f8fafc; border-bottom-color: #3b82f6; }
+    .tab-btn:hover { color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>CodeGuardian Dashboard</h1>
+        <span class="meta" id="report-meta">Laad scanrapport...</span>
+      </div>
+      <div>
+        <label for="file-input" class="filter-btn" style="display:inline-block;padding:0.5rem 1rem;background:#3b82f6;color:white;border:none;cursor:pointer;">
+          JSON Rapport Laden
+        </label>
+        <input type="file" id="file-input" accept=".json" style="display:none">
+      </div>
+    </header>
+
+    <div id="empty-state">
+      <div class="upload-area" id="upload-area">
+        <h2>Geen rapport geladen</h2>
+        <p>Sleep een JSON rapport hierheen of klik om te selecteren</p>
+        <p class="meta">Genereer een rapport met: <code>codeguardian scan --path . --output report.json</code></p>
+      </div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <div class="summary-grid">
+        <div class="card">
+          <div class="card-label">Repositories</div>
+          <div class="card-value" id="stat-repos">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Totaal Bevindingen</div>
+          <div class="card-value" id="stat-total">0</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Maturity</div>
+          <div class="card-value" id="stat-maturity">0/5</div>
+          <div class="card-sub" id="stat-maturity-label">-</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Avg Risk</div>
+          <div class="card-value" id="stat-avg-risk">-</div>
+        </div>
+      </div>
+
+      <div class="severity-bar" id="severity-bar"></div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-label">Findings per Categorie</div>
+          <div id="category-chart" style="height: 200px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Maturity over tijd</div>
+          <div id="trend-chart" style="height: 200px; position: relative;">
+            <p class="meta" id="trend-empty">Geen historische data</p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Repository Overzicht</h2>
+      <table class="repos-table">
+        <thead>
+          <tr>
+            <th data-sort="name">Repository</th>
+            <th data-sort="critical">Critical</th>
+            <th data-sort="high">High</th>
+            <th data-sort="medium">Medium</th>
+            <th data-sort="low">Low</th>
+            <th data-sort="findings">Totaal</th>
+            <th data-sort="maturity">Maturity</th>
+          </tr>
+        </thead>
+        <tbody id="repos-body"></tbody>
+      </table>
+
+      <h2>Bevindingen</h2>
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">Alles</button>
+        <button class="filter-btn" data-filter="critical">Critical</button>
+        <button class="filter-btn" data-filter="high">High</button>
+        <button class="filter-btn" data-filter="medium">Medium</button>
+        <button class="filter-btn" data-filter="low">Low</button>
+        <input type="text" class="search-input" id="search-input" placeholder="Zoek in bevindingen...">
+      </div>
+      <div class="findings-detail" id="findings-list"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentData = null;
+    let currentFilter = "all";
+    let currentSearch = "";
+    let currentSort = { field: "findings", dir: "desc" };
+    let selectedRepo = null;
+
+    async function loadReport() {
+      try {
+        const res = await fetch("/api/report");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.repositories && data.repositories.length > 0) {
+            renderDashboard(data);
+            return;
+          }
+        }
+      } catch {}
+      showEmpty();
+    }
+
+    function showEmpty() {
+      document.getElementById("empty-state").classList.remove("hidden");
+      document.getElementById("dashboard").classList.add("hidden");
+    }
+
+    function renderDashboard(data) {
+      currentData = data;
+      document.getElementById("empty-state").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+
+      const summary = data.summary;
+      document.getElementById("report-meta").textContent =
+        summary.totalRepositories + " repositories " + summary.totalFindings + " bevindingen";
+
+      document.getElementById("stat-repos").textContent = summary.totalRepositories;
+      document.getElementById("stat-total").textContent = summary.totalFindings;
+      document.getElementById("stat-maturity").textContent = (summary.maturity?.overall || "-") + "/5";
+      document.getElementById("stat-maturity-label").textContent = summary.maturity?.label || "-";
+      document.getElementById("stat-avg-risk").textContent = (summary.avgRisk || 0) + "/100";
+
+      renderSeverityBar(summary.bySeverity);
+      renderCategoryChart(summary.byCategory);
+      renderReposTable(data.repositories);
+      renderFindings(data.repositories);
+    }
+
+    function renderSeverityBar(bySeverity) {
+      const bar = document.getElementById("severity-bar");
+      const items = [
+        { key: "critical", label: "Critical", cls: "sev-critical" },
+        { key: "high", label: "High", cls: "sev-high" },
+        { key: "medium", label: "Medium", cls: "sev-medium" },
+        { key: "low", label: "Low", cls: "sev-low" },
+        { key: "info", label: "Info", cls: "sev-info" }
+      ];
+      bar.innerHTML = items.map(({ key, label, cls }) =>
+        "<div class=\"severity-item " + cls + "\" data-sev=\"" + key + "\">" + label + ": " + (bySeverity?.[key] ?? 0) + "</div>"
+      ).join("");
+      bar.querySelectorAll(".severity-item").forEach(el => {
+        el.addEventListener("click", () => {
+          const sev = el.dataset.sev;
+          document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+          const btn = document.querySelector("[data-filter=\"" + sev + "\"]");
+          if (btn) { btn.classList.add("active"); currentFilter = sev; }
+          if (currentData) renderFindings(currentData.repositories);
+        });
+      });
+    }
+
+    function renderCategoryChart(byCategory) {
+      const container = document.getElementById("category-chart");
+      if (!byCategory) { container.innerHTML = "<p class=\"meta\">Geen data</p>"; return; }
+
+      const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+      const max = Math.max(...entries.map(e => e[1]), 1);
+      const colors = ["#dc2626", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
+
+      let html = "<div style=\"display:flex;flex-direction:column;gap:0.5rem;\">";
+      entries.forEach(([cat, count], i) => {
+        const pct = (count / max) * 100;
+        const color = colors[i % colors.length];
+        html += "<div><div style=\"display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.2rem;\"><span>" + cat + "</span><span>" + count + "</span></div>";
+        html += "<div style=\"background:#0f172a;border-radius:4px;height:8px;\"><div style=\"width:" + pct + "%;background:" + color + ";height:100%;border-radius:4px;\"></div></div></div>";
+      });
+      html += "</div>";
+      container.innerHTML = html;
+    }
+
+    function renderReposTable(repos) {
+      const tbody = document.getElementById("repos-body");
+      const sorted = [...repos].sort((a, b) => {
+        let aVal, bVal;
+        if (currentSort.field === "name") { aVal = a.name; bVal = b.name; }
+        else if (currentSort.field === "maturity") { aVal = a.maturity?.overall || 0; bVal = b.maturity?.overall || 0; }
+        else if (currentSort.field === "findings") { aVal = a.findings.length; bVal = b.findings.length; }
+        else { aVal = a.summary[currentSort.field] || 0; bVal = b.summary[currentSort.field] || 0; }
+
+        if (typeof aVal === "string") {
+          return currentSort.dir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        }
+        return currentSort.dir === "asc" ? aVal - bVal : bVal - aVal;
+      });
+
+      tbody.innerHTML = sorted.map(repo => {
+        const m = repo.maturity || {};
+        return "<tr class=\"clickable\" data-repo=\"" + repo.name + "\">" +
+          "<td><strong>" + repo.name + "</strong></td>" +
+          "<td>" + (repo.summary.critical || 0) + "</td>" +
+          "<td>" + (repo.summary.high || 0) + "</td>" +
+          "<td>" + (repo.summary.medium || 0) + "</td>" +
+          "<td>" + (repo.summary.low || 0) + "</td>" +
+          "<td><strong>" + repo.findings.length + "</strong></td>" +
+          "<td><span class=\"maturity-cell\"><span class=\"maturity-dot mat-" + Math.round(m.overall || 1) + "\"></span> " + (m.overall || "-") + "/5</span></td>" +
+        "</tr>";
+      }).join("");
+
+      tbody.querySelectorAll("tr.clickable").forEach(row => {
+        row.addEventListener("click", () => {
+          const repoName = row.dataset.repo;
+          const repo = repos.find(r => r.name === repoName);
+          if (repo) { selectedRepo = repoName; renderFindings([repo]); }
+        });
+      });
+    }
+
+    function renderFindings(repos) {
+      let allFindings = repos.flatMap(r => r.findings.map(f => ({ ...f, repoName: r.name })));
+
+      if (currentFilter !== "all") {
+        allFindings = allFindings.filter(f => f.severity === currentFilter);
+      }
+
+      if (currentSearch) {
+        const q = currentSearch.toLowerCase();
+        allFindings = allFindings.filter(f =>
+          f.title.toLowerCase().includes(q) ||
+          f.category.toLowerCase().includes(q) ||
+          f.repoName.toLowerCase().includes(q) ||
+          (f.files && f.files.some(file => file.toLowerCase().includes(q)))
+        );
+      }
+
+      const sorted = allFindings.sort((a, b) => {
+        const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+        return (order[a.severity] ?? 4) - (order[b.severity] ?? 4);
+      });
+
+      const list = document.getElementById("findings-list");
+      if (selectedRepo) {
+        list.innerHTML = "<p class=\"meta\" style=\"margin-bottom:1rem;\"><strong>" + selectedRepo + "</strong> <span style=\"cursor:pointer;color:#3b82f6;\" id=\"clear-repo\">(toon alles)</span></p>";
+        document.getElementById("clear-repo").addEventListener("click", () => {
+          selectedRepo = null;
+          if (currentData) renderFindings(currentData.repositories);
+        });
+      }
+
+      const items = sorted.slice(0, 200).map(f => {
+        const loc = f.location ? f.files[0] + ":" + f.location.line : f.files[0];
+        const risk = f.riskScore != null ? " <span style=\"color:#64748b\">[risk: " + f.riskScore + "]</span>" : "";
+        return "<div class=\"finding-item finding-" + f.severity + "\">" +
+          "<div style=\"flex:1\">" +
+            "<div class=\"finding-title\">" + f.title + risk + "</div>" +
+            "<div class=\"finding-meta\">" + f.repoName + " " + loc + " " + f.category + "</div>" +
+            "<div class=\"finding-fix\">" + (f.proposedFix || "") + "</div>" +
+          "</div>" +
+        "</div>";
+      }).join("");
+
+      list.innerHTML += items;
+      if (sorted.length > 200) {
+        list.innerHTML += "<p class=\"meta\" style=\"margin-top:1rem\">... en nog " + (sorted.length - 200) + " bevindingen</p>";
+      }
+      if (sorted.length === 0) {
+        list.innerHTML += "<p class=\"meta\">Geen bevindingen gevonden</p>";
+      }
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.filter;
+        if (currentData) renderFindings(selectedRepo ? currentData.repositories.filter(r => r.name === selectedRepo) : currentData.repositories);
+      });
+    });
+
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      currentSearch = e.target.value;
+      if (currentData) renderFindings(selectedRepo ? currentData.repositories.filter(r => r.name === selectedRepo) : currentData.repositories);
+    });
+
+    document.querySelectorAll(".repos-table th[data-sort]").forEach(th => {
+      th.addEventListener("click", () => {
+        const field = th.dataset.sort;
+        if (currentSort.field === field) {
+          currentSort.dir = currentSort.dir === "asc" ? "desc" : "asc";
+        } else {
+          currentSort.field = field;
+          currentSort.dir = "desc";
+        }
+        if (currentData) renderReposTable(currentData.repositories);
+      });
+    });
+
+    document.getElementById("file-input").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try { renderDashboard(JSON.parse(ev.target.result)); } catch { alert("Ongeldig JSON bestand"); }
+      };
+      reader.readAsText(file);
+    });
+
+    const uploadArea = document.getElementById("upload-area");
+    uploadArea.addEventListener("click", () => document.getElementById("file-input").click());
+    uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.style.borderColor = "#60a5fa"; });
+    uploadArea.addEventListener("dragleave", () => { uploadArea.style.borderColor = "#334155"; });
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = "#334155";
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".json")) {
+        const reader = new FileReader();
+        reader.onload = (ev) => { try { renderDashboard(JSON.parse(ev.target.result)); } catch { alert("Ongeldig JSON"); } };
+        reader.readAsText(file);
+      }
+    });
+
+    loadReport();
+    loadTrends();
+
+    async function loadTrends() {
+      try {
+        const res = await fetch("/api/history");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data || data.length < 2) return;
+        renderTrendChart(data);
+      } catch {}
+    }
+
+    function renderTrendChart(data) {
+      const container = document.getElementById("trend-chart");
+      document.getElementById("trend-empty").remove();
+
+      const width = container.clientWidth || 600;
+      const height = 200;
+      const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+      const chartW = width - padding.left - padding.right;
+      const chartH = height - padding.top - padding.bottom;
+
+      const valid = data.filter(d => d.maturity !== null);
+      if (valid.length < 2) return;
+
+      const xScale = i => padding.left + (i / (valid.length - 1)) * chartW;
+      const yScale = v => padding.top + chartH - ((v - 1) / 4) * chartH;
+
+      let pathD = "";
+      valid.forEach((d, i) => {
+        pathD += (i === 0 ? "M" : "L") + xScale(i) + "," + yScale(d.maturity) + " ";
+      });
+
+      const points = valid.map((d, i) =>
+        "<circle cx=\"" + xScale(i) + "\" cy=\"" + yScale(d.maturity) + "\" r=\"3\" fill=\"#3b82f6\" />"
+      ).join("");
+
+      const yLabels = [1, 2, 3, 4, 5].map(v =>
+        "<text x=\"" + (padding.left - 5) + "\" y=\"" + (yScale(v) + 4) + "\" fill=\"#64748b\" font-size=\"10\" text-anchor=\"end\">" + v + "</text>" +
+        "<line x1=\"" + padding.left + "\" y1=\"" + yScale(v) + "\" x2=\"" + (width - padding.right) + "\" y2=\"" + yScale(v) + "\" stroke=\"#1e293b\" stroke-width=\"1\" />"
+      ).join("");
+
+      container.innerHTML = "<svg width=\"" + width + "\" height=\"" + height + "\">" + yLabels + "<path d=\"" + pathD + "\" fill=\"none\" stroke=\"#3b82f6\" stroke-width=\"2\" />" + points + "</svg>";
+    }
+  </script>
+</body>

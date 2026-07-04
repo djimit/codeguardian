@@ -1,0 +1,9 @@
+.git
+node_modules
+.opencode
+.swarm
+.codeguardian-history.jsonl
+.codeguardian-state.json
+.codeguardian-inventory.json
+codeguardian-report.json
+npm-debug.log

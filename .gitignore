@@ -1,0 +1,8 @@
+# CodeGuardian
+
+#.gitignore for CodeGuardian state files
+node_modules/
+.codeguardian-state.json
+.codeguardian-history.jsonl
+.codeguardian-inventory.json
+codeguardian-report.json

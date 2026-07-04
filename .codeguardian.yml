@@ -1,0 +1,51 @@
+# CodeGuardian self-scan config.
+fail_on: high
+
+suppressions:
+  - rule_id: "*"
+    path: "tests/**"
+    reason: Intentional scanner fixtures and regression cases.
+
+  - rule_id: "*"
+    path: "docs/**"
+    reason: Documentation names detector patterns and example risks.
+
+  - rule_id: "*"
+    path: "README.md"
+    reason: Documentation names detector patterns and example risks.
+
+  - rule_id: repo-audit-tls-verify-bypass
+    path: "src/core/best-practices.js"
+    reason: Scanner rule definition, not an active bypass.
+
+  - rule_id: best-practice-tls-reject-unauthorized
+    path: "src/core/best-practices.js"
+    reason: Scanner rule definition, not an active bypass.
+
+  - rule_id: best-practice-insecure-env-fallback
+    path: "src/core/best-practices.js"
+    reason: Scanner rule definition, not an active fallback.
+
+  - rule_id: best-practice-eval-usage
+    path: "src/core/best-practices.js"
+    reason: Scanner rule definition, not dynamic execution.
+
+  - rule_id: repo-audit-tls-verify-bypass
+    path: "src/core/report-formatter.js"
+    reason: Report text for scanner output.
+
+  - rule_id: repo-audit-git-remote-credentials
+    path: ".git/config"
+    reason: Local git metadata is not part of the published repository.
+
+  - rule_id: repo-audit-tls-verify-bypass
+    path: ".codeguardian.yml"
+    reason: Self-scan suppression text names the detector category.
+
+  - rule_id: repo-audit-entropy-high-entropy-string
+    path: "action.yml"
+    reason: GitHub Actions expressions are not secrets.
+
+history:
+  enabled: true
+  retention_days: 90

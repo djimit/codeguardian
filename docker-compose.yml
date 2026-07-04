@@ -1,0 +1,25 @@
+# CodeGuardian - Docker Compose
+services:
+  codeguardian:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    volumes:
+      - ./repos:/repos:ro
+      - ./reports:/reports
+    restart: unless-stopped
+
+  # Optional: scheduled scans
+  codeguardian-scheduler:
+    build: .
+    environment:
+      - PORT=8081
+    volumes:
+      - ./repos:/repos:ro
+      - ./reports:/reports
+      - ./codeguardian.yml:/app/.codeguardian.yml:ro
+    profiles:
+      - scheduler
+    restart: unless-stopped

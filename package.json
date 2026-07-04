@@ -1,0 +1,51 @@
+{
+  "name": "@djimit/codeguardian",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Multi-repo code security scanner with maturity scoring, CVE detection, and NL PII scanning",
+  "homepage": "https://github.com/djimit/codeguardian",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/djimit/codeguardian.git"
+  },
+  "bugs": {
+    "url": "https://github.com/djimit/codeguardian/issues"
+  },
+  "author": "Dutch Dim",
+  "bin": {
+    "codeguardian": "./bin/codeguardian.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "docs/",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "Dockerfile",
+    "docker-compose.yml",
+    "action.yml",
+    "action-scheduled.yml",
+    ".codeguardian.yml.example"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "lint": "node --check bin/codeguardian.js src/index.js src/server.js src/dashboard/server.js src/core/*.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@djimit/security-review-commons": "https://github.com/djimit/security-review-commons/archive/e178d3e01767ad5e0217045a0f00bbc5fcf48d43.tar.gz"
+  },
+  "keywords": [
+    "security",
+    "code-review",
+    "sast",
+    "cve",
+    "pii",
+    "multi-repo"
+  ],
+  "license": "MIT"
+}
