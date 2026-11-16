@@ -29,8 +29,8 @@ async function discoverGitHubRepos(username) {
   try {
     const output = execFileSync(
       "gh",
-      ["api", `users/${username}/repos?per_page=100&type=all`, "--jq", ".[].full_name"],
-      { encoding: "utf8", timeout: 30_000 }
+      ["repo", "list", username, "--limit", "1000", "--json", "nameWithOwner", "--jq", ".[].nameWithOwner"],
+      { encoding: "utf8", timeout: 60_000 }
     );
     return output.trim().split("\n").filter(Boolean);
   } catch {
@@ -38,12 +38,15 @@ async function discoverGitHubRepos(username) {
   }
 }
 
-function cloneRepo(repoFullName, tmpDir) {
+function cloneRepo(repoFullName, tmpDir, includeHistory = false) {
   const sanitized = sanitizeRepoName(repoFullName);
   const target = path.join(tmpDir, sanitized.replace("/", "__"));
   try {
-    execFileSync("git", ["clone", "--depth", "1", `https://github.com/${sanitized}.git`, target], {
-      encoding: "utf8", timeout: 120_000, stdio: "pipe"
+    const cloneArgs = ["clone"];
+    if (!includeHistory) cloneArgs.push("--depth", "1");
+    cloneArgs.push(`https://github.com/${sanitized}.git`, target);
+    execFileSync("git", cloneArgs, {
+      encoding: "utf8", timeout: includeHistory ? 300_000 : 120_000, stdio: "pipe"
     });
     return target;
   } catch {
@@ -89,7 +92,7 @@ export async function scanRepositories({
   if (username) {
     const ghRepos = await discoverGitHubRepos(username);
     for (const repoFullName of ghRepos) {
-      const localPath = cloneRepo(repoFullName, tmpDir);
+      const localPath = cloneRepo(repoFullName, tmpDir, scanners.history);
       if (localPath) {
         allRepoPaths.push({ name: repoFullName, path: localPath, source: "github" });
       }
@@ -99,7 +102,7 @@ export async function scanRepositories({
   for (const repo of repos) {
     if (repo.owner && repo.name) {
       const fullName = `${repo.owner}/${repo.name}`;
-      const localPath = cloneRepo(fullName, tmpDir);
+      const localPath = cloneRepo(fullName, tmpDir, scanners.history);
       if (localPath) {
         allRepoPaths.push({ name: fullName, path: localPath, source: "github" });
       }

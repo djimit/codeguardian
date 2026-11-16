@@ -2,7 +2,7 @@ export { scanDependencies } from "./core/dependency-scanner.js";
 export { scanPII } from "./core/pii-scanner.js";
 export { scanRepositories } from "./core/multi-repo.js";
 export { calculateMaturity, maturityToMarkdown } from "./core/maturity.js";
-export { formatMarkdownReport, formatJsonReport } from "./core/report-formatter.js";
+export { formatMarkdownReport, formatJsonReport, writeJsonReport } from "./core/report-formatter.js";
 export { loadConfig } from "./core/config.js";
 export { applySuppressions } from "./core/suppressions.js";
 export { appendHistory, readHistory, getTrendData, recordScan } from "./core/history.js";
