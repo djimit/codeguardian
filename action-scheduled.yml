@@ -34,7 +34,7 @@ jobs:
           node-version: "20"
 
       - name: Install CodeGuardian
-        run: npm install --global https://github.com/djimit/codeguardian/archive/897ddd152373ff43ffa6e4b291c1539f310ad7f0.tar.gz --ignore-scripts
+        run: npm install --global https://github.com/djimit/codeguardian/archive/ef415e4.tar.gz --ignore-scripts
 
       - name: Run Scan
         id: scan
