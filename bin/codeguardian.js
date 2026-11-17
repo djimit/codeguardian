@@ -4,7 +4,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { scanRepositories } from "../src/core/multi-repo.js";
 import { loadConfig } from "../src/core/config.js";
-import { formatMarkdownReport, formatJsonReport } from "../src/core/report-formatter.js";
+import { formatMarkdownReport, formatJsonReport, writeJsonReport } from "../src/core/report-formatter.js";
 import { startDashboard } from "../src/dashboard/server.js";
 import { generatePrComment, shouldBlockMerge } from "../src/core/pr-comment.js";
 import { scanStagedFiles } from "../src/core/staged-scan.js";
@@ -415,10 +415,11 @@ async function main() {
   }
 
   if (args.output) {
-    const outputContent = args.format === "sarif"
-      ? JSON.stringify(formatSarifReport(result), null, 2)
-      : formatJsonReport(result);
-    fs.writeFileSync(args.output, outputContent);
+    if (args.format === "sarif") {
+      fs.writeFileSync(args.output, JSON.stringify(formatSarifReport(result), null, 2));
+    } else {
+      writeJsonReport(args.output, result);
+    }
     process.stderr.write(`Report written to ${args.output}\n`);
   }
 

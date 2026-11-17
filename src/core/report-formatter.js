@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { maturityToMarkdown } from "./maturity.js";
 import { riskLabel, riskColor } from "./risk-engine.js";
 import { complianceToMarkdown } from "./compliance.js";
@@ -147,4 +148,27 @@ export function formatMarkdownReport({ repositories, summary, username, date, ba
 
 export function formatJsonReport({ repositories, summary }) {
   return JSON.stringify({ repositories, summary }, null, 2);
+}
+
+export function writeJsonReport(filePath, { repositories, summary }) {
+  const temporaryPath = `${filePath}.tmp-${process.pid}`;
+  const fd = fs.openSync(temporaryPath, "w");
+  try {
+    fs.writeSync(fd, '{\n  "repositories": [');
+    repositories.forEach((repository, index) => {
+      if (index > 0) fs.writeSync(fd, ",");
+      const { findings = [], ...metadata } = repository;
+      const metadataJson = JSON.stringify(metadata);
+      fs.writeSync(fd, `\n    ${metadataJson.slice(0, -1)}${Object.keys(metadata).length ? "," : ""}\"findings\": [`);
+      findings.forEach((finding, findingIndex) => {
+        if (findingIndex > 0) fs.writeSync(fd, ",");
+        fs.writeSync(fd, `\n      ${JSON.stringify(finding)}`);
+      });
+      fs.writeSync(fd, "\n    ]\n  }");
+    });
+    fs.writeSync(fd, `\n  ],\n  "summary": ${JSON.stringify(summary)}\n}\n`);
+  } finally {
+    fs.closeSync(fd);
+  }
+  fs.renameSync(temporaryPath, filePath);
 }
