@@ -148,7 +148,10 @@ export async function scanRepositories({
     if (scanners.secrets) {
       try {
         const { runRepoAudit } = await import("@djimit/security-review-commons");
-        const auditResult = runRepoAudit({ repoRoot: repoInfo.path });
+        const auditResult = runRepoAudit({
+          repoRoot: repoInfo.path,
+          includeGitHistory: scanners.history
+        });
         if (auditResult.findings) {
           repoFindings.push(...auditResult.findings);
           repoStats.secrets = auditResult.stats || { findings: auditResult.findings.length };
