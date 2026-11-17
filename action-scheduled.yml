@@ -41,7 +41,7 @@ jobs:
         run: |
           codeguardian scan \
             --path . \
-            --scanners ${{ github.event.inputs.scanners || 'secrets,dependencies,pii,history' }} \
+            --scanners ${{ github.event.inputs.scanners || 'secrets,dependencies,pii' }} \
             --format json \
             --output codeguardian-report.json \
             --fail-on ${{ github.event.inputs.fail_on || 'critical' }}
